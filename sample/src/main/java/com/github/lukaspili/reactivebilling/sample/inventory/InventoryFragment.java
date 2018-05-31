@@ -23,13 +23,10 @@ import com.github.lukaspili.reactivebilling.sample.R;
 import com.github.lukaspili.reactivebilling.sample.TabsAdapter;
 import com.github.lukaspili.reactivebilling.sample.Utils;
 
-import java.util.List;
-
-import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action1;
-import rx.functions.Func1;
-import rx.schedulers.Schedulers;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * Created by lukasz on 06/05/16.
@@ -41,6 +38,7 @@ public class InventoryFragment extends Fragment implements TabsAdapter.Tab {
     private InventoryAdapter adapter = new InventoryAdapter();
 
     private Dialog dialog;
+    private CompositeDisposable disposables;
 
     @Nullable
     @Override
@@ -97,50 +95,39 @@ public class InventoryFragment extends Fragment implements TabsAdapter.Tab {
             dialog.dismiss();
             dialog = null;
         }
-
+        disposables.dispose();
         super.onDestroy();
     }
 
     private void load() {
         Log.d(getClass().getName(), "Load inventory");
 
-        ReactiveBilling.getInstance(getContext())
+        disposables.add(ReactiveBilling.getInstance(getContext())
                 .getPurchases(PurchaseType.PRODUCT, null)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Action1<GetPurchasesResponse>() {
-                    @Override
-                    public void call(GetPurchasesResponse getPurchasesResponse) {
-                        if (getActivity() == null) return;
-                        refreshLayout.setRefreshing(false);
-                        didSucceedGetPurchases(getPurchasesResponse);
-                    }
-                }, new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        if (getActivity() == null) return;
-                        refreshLayout.setRefreshing(false);
-                        didFailGetPurchases();
-                    }
-                });
+                .subscribe(getPurchasesResponse ->
+                {
+                    if (getActivity() == null) return;
+                    refreshLayout.setRefreshing(false);
+                    didSucceedGetPurchases(getPurchasesResponse);
+                },
+                        throwable ->
+                {
+                    if (getActivity() == null) return;
+                    refreshLayout.setRefreshing(false);
+                    didFailGetPurchases();
+                }));
+;
     }
 
     private void didSucceedGetPurchases(GetPurchasesResponse getPurchasesResponse) {
         if (getPurchasesResponse.isSuccess()) {
-            Observable.from(getPurchasesResponse.getList())
-                    .map(new Func1<GetPurchasesResponse.PurchaseResponse, Purchase>() {
-                        @Override
-                        public Purchase call(GetPurchasesResponse.PurchaseResponse purchaseResponse) {
-                            return purchaseResponse.getPurchase();
-                        }
-                    })
+            disposables.add(
+                    Observable.fromIterable(getPurchasesResponse.getList())
+                    .map(GetPurchasesResponse.PurchaseResponse::getPurchase)
                     .toList()
-                    .subscribe(new Action1<List<Purchase>>() {
-                        @Override
-                        public void call(List<Purchase> purchases) {
-                            adapter.bind(purchases);
-                        }
-                    });
+                    .subscribe(purchases -> adapter.bind(purchases)));
         } else {
             // error
             Log.d(getClass().getName(), "error");
@@ -155,21 +142,13 @@ public class InventoryFragment extends Fragment implements TabsAdapter.Tab {
     // Consume
 
     private void consume(Purchase purchase) {
-        ReactiveBilling.getInstance(getContext())
+        disposables.add(
+                ReactiveBilling.getInstance(getContext())
                 .consumePurchase(purchase.getPurchaseToken())
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Action1<Response>() {
-                    @Override
-                    public void call(Response response) {
-                        didSucceedConsumePurchase(response);
-                    }
-                }, new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        didFailConsumePurchase();
-                    }
-                });
+                .subscribe(this::didSucceedConsumePurchase,
+                           throwable ->  didFailConsumePurchase()));
     }
 
     private void didSucceedConsumePurchase(Response response) {

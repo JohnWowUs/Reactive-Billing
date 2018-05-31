@@ -8,8 +8,9 @@ import com.github.lukaspili.reactivebilling.BillingService;
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
 import com.github.lukaspili.reactivebilling.response.Response;
 
-import rx.Observable;
-import rx.Observer;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.Observer;
 
 public class IsBillingSupportedObservable extends BaseObservable<Response> {
 
@@ -25,10 +26,10 @@ public class IsBillingSupportedObservable extends BaseObservable<Response> {
     }
 
     @Override
-    protected void onBillingServiceReady(BillingService billingService, Observer<? super Response> observer) {
+    protected void onBillingServiceReady(BillingService billingService, ObservableEmitter<? super Response> observer) {
         try {
             observer.onNext(billingService.isBillingSupported(purchaseType));
-            observer.onCompleted();
+            observer.onComplete();
         } catch (RemoteException e) {
             observer.onError(e);
         }

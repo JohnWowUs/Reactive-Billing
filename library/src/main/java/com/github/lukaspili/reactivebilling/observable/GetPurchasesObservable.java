@@ -9,8 +9,9 @@ import com.github.lukaspili.reactivebilling.BillingService;
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
 import com.github.lukaspili.reactivebilling.response.GetPurchasesResponse;
 
-import rx.Observable;
-import rx.Observer;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.Observer;
 
 public class GetPurchasesObservable extends BaseObservable<GetPurchasesResponse> {
 
@@ -29,19 +30,13 @@ public class GetPurchasesObservable extends BaseObservable<GetPurchasesResponse>
     }
 
     @Override
-    protected void onBillingServiceReady(BillingService billingService, Observer<? super GetPurchasesResponse> observer) {
+    protected void onBillingServiceReady(BillingService billingService, ObservableEmitter<? super GetPurchasesResponse> observer) {
         try {
             observer.onNext(billingService.getPurchases(purchaseType, continuationToken));
-            observer.onCompleted();
+            observer.onComplete();
         } catch (RemoteException e) {
             observer.onError(e);
         }
     }
 
-//    @Override
-//    protected void onBillingServiceReady(IInAppBillingService billingService, Observer<? super IInAppBillingService> observer) {
-//        ReactiveBillingLogger.log("Billing service observable - service ready");
-//        observer.onNext(billingService);
-//        observer.onCompleted();
-//    }
 }

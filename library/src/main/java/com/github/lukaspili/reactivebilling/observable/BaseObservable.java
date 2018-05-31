@@ -9,49 +9,40 @@ import android.os.Looper;
 import com.android.vending.billing.IInAppBillingService;
 import com.github.lukaspili.reactivebilling.BillingService;
 import com.github.lukaspili.reactivebilling.ReactiveBilling;
+
+
 import java.util.concurrent.Semaphore;
-import rx.Observable;
-import rx.Observer;
-import rx.Subscriber;
-import rx.functions.Action0;
-import rx.subscriptions.Subscriptions;
+
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.disposables.Disposables;
 
 
-public abstract class BaseObservable<T> implements Observable.OnSubscribe<T> {
-
-    protected final Context context;
-    private final Semaphore semaphore = new Semaphore(0);
-
-    private BillingService billingService;
-
-    BaseObservable(Context context) {
-        this.context = context;
-    }
-
+public abstract class BaseObservable<T> implements ObservableOnSubscribe<T> {
     @Override
-    public void call(Subscriber<? super T> subscriber) {
+    public void subscribe(ObservableEmitter<T> emitter) throws Exception {
         final Intent intent = new Intent("com.android.vending.billing.InAppBillingService.BIND");
         intent.setPackage("com.android.vending");
 
-        // don't bother with semaphores in the originating thread is the main thread
+        // don't bother with semaphores if the originating thread is the main thread
         final boolean useSemaphore = Looper.myLooper() != Looper.getMainLooper();
-        final Connection connection = new Connection(subscriber, useSemaphore);
+        final Connection connection = new Connection(emitter, useSemaphore);
 
         ReactiveBilling.log(null, "Bind service (thread %s)", Thread.currentThread().getName());
         try {
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
         } catch (SecurityException e) {
             ReactiveBilling.log(e, "Bind service error");
-            subscriber.onError(e);
-        }
+            emitter.onError(e);
 
-        subscriber.add(Subscriptions.create(new Action0() {
-            @Override
-            public void call() {
-                ReactiveBilling.log(null, "Unbind service (thread %s)", Thread.currentThread().getName());
-                context.unbindService(connection);
-            }
-        }));
+        }
+        emitter.setDisposable(
+                Disposables.fromAction(() ->
+                {
+                    ReactiveBilling.log(null, "Unbind service (thread %s)", Thread.currentThread().getName());
+                    context.unbindService(connection);
+                })
+        );
 
         if (useSemaphore) {
             // freeze the current RX thread until service is connected
@@ -63,23 +54,34 @@ public abstract class BaseObservable<T> implements Observable.OnSubscribe<T> {
             // once the semaphore is released
             // it means that the service is connected and available
             //TODO: what happens if the service is never connected?
-            deliverBillingService(subscriber);
+            deliverBillingService(emitter);
         }
     }
 
-    private void deliverBillingService(Observer observer) {
+    protected final Context context;
+    private final Semaphore semaphore = new Semaphore(0);
+
+
+    private BillingService billingService;
+
+    BaseObservable(Context context) {
+        this.context = context;
+    }
+
+
+    private void deliverBillingService(ObservableEmitter<T>  observer) {
         ReactiveBilling.log(null, "Billing service ready (thread %s)", Thread.currentThread().getName());
         onBillingServiceReady(billingService, observer);
     }
 
-    protected abstract void onBillingServiceReady(BillingService billingService, Observer<? super T> observer);
+    protected abstract void onBillingServiceReady(BillingService billingService, ObservableEmitter<? super T> observer);
 
     private class Connection implements ServiceConnection {
 
-        private final Observer observer;
+        private final ObservableEmitter<T>  observer;
         private final boolean useSemaphore;
 
-        public Connection(Observer observer, boolean useSemaphore) {
+        Connection(ObservableEmitter<T> observer, boolean useSemaphore) {
             this.observer = observer;
             this.useSemaphore = useSemaphore;
         }

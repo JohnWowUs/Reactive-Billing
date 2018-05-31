@@ -13,8 +13,9 @@ import com.github.lukaspili.reactivebilling.model.PurchaseType;
 import com.github.lukaspili.reactivebilling.response.GetBuyIntentResponse;
 import com.github.lukaspili.reactivebilling.response.Response;
 
-import rx.Observable;
-import rx.Observer;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.Observer;
 
 public class GetBuyIntentObservable extends BaseObservable<Response> {
 
@@ -44,13 +45,13 @@ public class GetBuyIntentObservable extends BaseObservable<Response> {
     }
 
     @Override
-    protected void onBillingServiceReady(BillingService billingService, Observer<? super Response> observer) {
+    protected void onBillingServiceReady(BillingService billingService, ObservableEmitter<? super Response> observer) {
         GetBuyIntentResponse response;
         try {
             response = billingService.getBuyIntent(productId, purchaseType, developerPayload);
 
             observer.onNext(response);
-            observer.onCompleted();
+            observer.onComplete();
         } catch (RemoteException e) {
             observer.onError(e);
             return;

@@ -7,8 +7,9 @@ import com.github.lukaspili.reactivebilling.BillingService;
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
 import com.github.lukaspili.reactivebilling.response.GetSkuDetailsResponse;
 import java.util.List;
-import rx.Observable;
-import rx.Observer;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.Observer;
 
 public class GetSkuDetailsObservable extends BaseObservable<GetSkuDetailsResponse> {
 
@@ -27,10 +28,10 @@ public class GetSkuDetailsObservable extends BaseObservable<GetSkuDetailsRespons
     }
 
     @Override
-    protected void onBillingServiceReady(BillingService billingService, Observer<? super GetSkuDetailsResponse> observer) {
+    protected void onBillingServiceReady(BillingService billingService, ObservableEmitter<? super GetSkuDetailsResponse> observer) {
         try {
             observer.onNext(billingService.getSkuDetails(purchaseType, productIds));
-            observer.onCompleted();
+            observer.onComplete();
         } catch (RemoteException e) {
             observer.onError(e);
         }

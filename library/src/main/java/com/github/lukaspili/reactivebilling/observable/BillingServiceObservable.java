@@ -5,8 +5,9 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import com.github.lukaspili.reactivebilling.BillingService;
 
-import rx.Observable;
-import rx.Observer;
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.Observer;
 
 public class BillingServiceObservable extends BaseObservable<BillingService> {
 
@@ -19,8 +20,8 @@ public class BillingServiceObservable extends BaseObservable<BillingService> {
     }
 
     @Override
-    protected void onBillingServiceReady(BillingService billingService, Observer<? super BillingService> observer) {
+    protected void onBillingServiceReady(BillingService billingService, ObservableEmitter<? super BillingService> observer) {
         observer.onNext(billingService);
-        observer.onCompleted();
+        observer.onComplete();
     }
 }

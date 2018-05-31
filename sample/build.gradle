@@ -13,13 +13,19 @@ buildscript {
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    compileSdkVersion 27
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "com.github.lukaspili.reactivebilling.sample"
         minSdkVersion 16
-        targetSdkVersion 23
+        targetSdkVersion 27
         versionCode 3
         versionName "1.1"
     }
@@ -48,12 +54,13 @@ repositories {
 }
 
 dependencies {
-    compile project(':library')
+    implementation project(':library')
 
-    compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.android.support:recyclerview-v7:23.3.0'
-    compile 'com.android.support:design:23.3.0'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
+    implementation 'com.android.support:design:27.1.1'
 
-    compile 'io.reactivex:rxjava:1.1.5'
-    compile 'io.reactivex:rxandroid:1.2.0'
+
+    implementation 'io.reactivex.rxjava2:rxjava:2.1.14'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'
 }

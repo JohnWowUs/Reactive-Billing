@@ -9,10 +9,10 @@ import android.os.Bundle;
 import com.github.lukaspili.reactivebilling.model.Purchase;
 import com.github.lukaspili.reactivebilling.parser.PurchaseParser;
 import com.github.lukaspili.reactivebilling.response.PurchaseResponse;
-import com.jakewharton.rxrelay.PublishRelay;
+import com.jakewharton.rxrelay2.PublishRelay;
 
-import rx.Observable;
-import rx.functions.Action0;
+import io.reactivex.Observable;
+
 
 /**
  * Created by lukasz on 06/05/16.
@@ -21,29 +21,17 @@ public class PurchaseFlowService {
 
     private final Context context;
     private final PublishRelay<PurchaseResponse> subject = PublishRelay.create();
-    private final Observable<PurchaseResponse> observable = subject.doOnSubscribe(new Action0() {
-        @Override
-        public void call() {
-            if (hasSubscription) {
-                throw new IllegalStateException("Already has subscription");
-            }
-
-            ReactiveBilling.log(null, "Purchase flow - subscribe (thread %s)", Thread.currentThread().getName());
-            hasSubscription = true;
+    private boolean hasSubscription;
+    private final Observable<PurchaseResponse> observable = subject.doOnSubscribe( __ ->
+    {
+        if (hasSubscription) {
+            throw new IllegalStateException("Already has subscription");
         }
-    }).doOnUnsubscribe(new Action0() {
-        @Override
-        public void call() {
-            if (!hasSubscription) {
-                throw new IllegalStateException("Doesn't have any subscription");
-            }
 
-            ReactiveBilling.log(null, "Purchase flow - unsubscribe (thread %s)", Thread.currentThread().getName());
-            hasSubscription = false;
-        }
+        ReactiveBilling.log(null, "Purchase flow - subscribe (thread %s)", Thread.currentThread().getName());
+        hasSubscription = true;
     });
 
-    private boolean hasSubscription;
 
     PurchaseFlowService(Context context) {
         this.context = context;
@@ -86,13 +74,13 @@ public class PurchaseFlowService {
                 String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
                 Purchase purchase = PurchaseParser.parse(purchaseData);
                 String signature = data.getStringExtra("INAPP_DATA_SIGNATURE");
-                subject.call(new PurchaseResponse(response, purchase, purchaseData, signature, extras, false));
+                subject.accept(new PurchaseResponse(response, purchase, purchaseData, signature, extras, false));
             } else {
-                subject.call(new PurchaseResponse(response, null, null, null, extras, false));
+                subject.accept(new PurchaseResponse(response, null, null, null, extras, false));
             }
         } else {
             ReactiveBilling.log(null, "Purchase flow result - CANCELED (thread %s)", Thread.currentThread().getName());
-            subject.call(new PurchaseResponse(-1, null, null, null, extras, true));
+            subject.accept(new PurchaseResponse(-1, null, null, null, extras, true));
         }
     }
 }
