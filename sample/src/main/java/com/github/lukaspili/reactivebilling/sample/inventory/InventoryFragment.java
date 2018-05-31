@@ -52,7 +52,7 @@ public class InventoryFragment extends Fragment implements TabsAdapter.Tab {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
+        disposables = new CompositeDisposable();
         refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {

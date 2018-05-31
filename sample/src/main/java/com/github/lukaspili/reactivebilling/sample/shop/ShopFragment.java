@@ -40,7 +40,7 @@ public class ShopFragment extends Fragment implements TabsAdapter.Tab {
     private SwipeRefreshLayout refreshLayout;
     private RecyclerView recyclerView;
     private ShopAdapter adapter = new ShopAdapter();
-    private CompositeDisposable disposable;
+    private CompositeDisposable disposables;
 
     private Dialog dialog;
 
@@ -59,21 +59,21 @@ public class ShopFragment extends Fragment implements TabsAdapter.Tab {
             dialog.dismiss();
             dialog = null;
         }
-        disposable.dispose();
+        disposables.dispose();
         super.onDestroy();
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
+        disposables = new CompositeDisposable();
         refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
                 load();
             }
         });
-        disposable = new CompositeDisposable();
+
         adapter.bind(new ShopAdapter.DidClickItem() {
             @Override
             public void onClick(final SkuDetails skuDetails) {
@@ -102,7 +102,7 @@ public class ShopFragment extends Fragment implements TabsAdapter.Tab {
         recyclerView.setAdapter(adapter);
 
         Log.d(getClass().getName(), "Subscribe to purchase flow");
-        disposable.add(ReactiveBilling.getInstance(getContext()).purchaseFlow()
+        disposables.add(ReactiveBilling.getInstance(getContext()).purchaseFlow()
                 .flatMap(apurchaseResponse ->
                 {
                     // shall we consume directly?
@@ -146,7 +146,7 @@ public class ShopFragment extends Fragment implements TabsAdapter.Tab {
     private void load() {
         Log.d(getClass().getName(), "Load shop");
 
-        disposable.add(
+        disposables.add(
                 ReactiveBilling.getInstance(getContext())
                 .getSkuDetails(PurchaseType.PRODUCT, "coffee", "beer")
                 .subscribeOn(Schedulers.io())
@@ -189,7 +189,7 @@ public class ShopFragment extends Fragment implements TabsAdapter.Tab {
         final Bundle extras = new Bundle();
         extras.putBoolean("consume", consume);
 
-        disposable.add(
+        disposables.add(
                 ReactiveBilling.getInstance(getContext())
                 .startPurchase(skuDetails.getProductId(), skuDetails.getPurchaseType(), null, extras)
                 .subscribeOn(Schedulers.io())
